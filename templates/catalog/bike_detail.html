@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ bike.model }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .bike-detail {
+        background: white;
+        border-radius: 8px;
+        padding: 30px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .bike-detail h1 { margin-bottom: 20px; color: #2c3e50; }
+    .bike-detail .row {
+        display: flex;
+        padding: 12px 0;
+        border-bottom: 1px solid #eee;
+    }
+    .bike-detail .row:last-child { border-bottom: none; }
+    .bike-detail .label {
+        width: 200px;
+        font-weight: bold;
+        color: #555;
+    }
+    .bike-detail .value { color: #333; }
+    .bike-detail .status {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    .status.available { background: #d4edda; color: #155724; }
+    .status.rented { background: #f8d7da; color: #721c24; }
+    .status.maintenance { background: #fff3cd; color: #856404; }
+    .bike-detail .actions {
+        margin-top: 25px;
+        display: flex;
+        gap: 12px;
+    }
+    .bike-detail .actions a, .bike-detail .actions button {
+        padding: 12px 24px;
+        border-radius: 4px;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    .btn-back { background: #ecf0f1; color: #333; }
+    .btn-back:hover { background: #d5dbdb; }
+    .btn-rent { background: #27ae60; color: white; }
+    .btn-rent:hover { background: #229954; }
+    .btn-rent:disabled, .btn-rent.disabled {
+        background: #ccc;
+        color: #666;
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bike-detail">
+    <h1>{{ bike.model }}</h1>
+
+    <div class="row">
+        <div class="label">Серийный номер</div>
+        <div class="value">{{ bike.serial_number }}</div>
+    </div>
+    <div class="row">
+        <div class="label">Тип</div>
+        <div class="value">{{ bike.bike_type.name }}</div>
+    </div>
+    <div class="row">
+        <div class="label">Цена за сутки</div>
+        <div class="value">{{ bike.bike_type.base_price_per_day }} ₽</div>
+    </div>
+    <div class="row">
+        <div class="label">Статус</div>
+        <div class="value">
+            <span class="status {{ bike.status }}">{{ bike.get_status_display }}</span>
+        </div>
+    </div>
+    {% if bike.description %}
+    <div class="row">
+        <div class="label">Описание</div>
+        <div class="value">{{ bike.description }}</div>
+    </div>
+    {% endif %}
+
+    <div class="actions">
+        <a href="{% url 'catalog:bike_list' %}" class="btn-back">← Назад в каталог</a>
+        {% if user.is_authenticated and bike.is_available %}
+            <a href="{% url 'rentals:rental_create' %}?bike={{ bike.pk }}" class="btn-rent">Оформить прокат</a>
+        {% else %}
+            <button class="btn-rent disabled" disabled>Оформить прокат</button>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
