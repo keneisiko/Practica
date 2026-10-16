@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if user.is_manager_role %}Все прокаты{% else %}Мои прокаты{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{% if user.is_manager_role %}Все прокаты{% else %}Мои прокаты{% endif %}</h1>
+    <p>{% if user.is_manager_role %}Прокаты всех клиентов: завершение, просмотр и {% if user.is_admin_role %}редактирование{% else %}сопровождение{% endif %}.{% else %}История ваших прокатов и их стоимость.{% endif %}</p>
+  </div>
+  <a class="btn btn--accent" href="{% url 'rentals:rental_create' %}"><svg><use href="#i-plus"/></svg>Оформить прокат</a>
+</div>
+
+<div class="page-head" style="margin-bottom: 16px; align-items: center">
+  <nav class="segmented" aria-label="Статус проката">
+    <a href="{% querystring status=None page=None %}" class="{% if not current_status %}is-active{% endif %}">Все<span class="count">{{ counts.all }}</span></a>
+    <a href="{% querystring status='active' page=None %}" class="{% if current_status == 'active' %}is-active{% endif %}">Активные<span class="count">{{ counts.active }}</span></a>
+    <a href="{% querystring status='completed' page=None %}" class="{% if current_status == 'completed' %}is-active{% endif %}">Завершённые<span class="count">{{ counts.completed }}</span></a>
+    <a href="{% querystring status='cancelled' page=None %}" class="{% if current_status == 'cancelled' %}is-active{% endif %}">Отменённые</a>
+  </nav>
+  {% if user.is_manager_role %}
+    <form method="get" class="btn-row" role="search">
+      {% if current_status %}<input type="hidden" name="status" value="{{ current_status }}">{% endif %}
+      <div class="search-input" style="min-width: 280px">
+        <svg aria-hidden="true"><use href="#i-search"/></svg>
+        <input type="search" name="q" value="{{ q }}" placeholder="Клиент, телефон или велосипед" aria-label="Поиск прокатов">
+      </div>
+      <button class="btn btn--ghost" type="submit">Найти</button>
+    </form>
+  {% endif %}
+</div>
+
+{% if rentals %}
+  <div class="card table-wrap">
+    <table class="table table--cards">
+      <thead>
+        <tr>
+          <th>№</th>
+          {% if user.is_manager_role %}<th>Клиент</th>{% endif %}
+          <th>Велосипед</th>
+          <th>Начало</th>
+          <th>Окончание</th>
+          <th class="num">Стоимость</th>
+          <th>Статус</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rental in rentals %}
+          <tr>
+            <td data-label="№"><a class="cell-main" href="{% url 'rentals:rental_detail' rental.pk %}">#{{ rental.pk }}</a></td>
+            {% if user.is_manager_role %}
+              <td data-label="Клиент"><div class="cell-main">{{ rental.client.full_name }}</div><div class="cell-sub">{{ rental.client.phone }}</div></td>
+            {% endif %}
+            <td data-label="Велосипед"><div class="cell-main">{{ rental.bike.model }}</div><div class="cell-sub">{{ rental.bike.bike_type.name }}</div></td>
+            <td data-label="Начало" class="nowrap">{{ rental.start_datetime|date:"d.m.Y H:i" }}</td>
+            <td data-label="Окончание" class="nowrap">{{ rental.end_datetime|date:"d.m.Y H:i" }}</td>
+            <td data-label="Стоимость" class="num"><strong>{{ rental.total_cost }} ₽</strong></td>
+            <td data-label="Статус"><span class="badge badge--{{ rental.status }}">{{ rental.get_status_display }}</span></td>
+            <td data-label="" class="num">
+              <div class="btn-row" style="justify-content: flex-end">
+                <a class="btn btn--ghost btn--sm" href="{% url 'rentals:rental_detail' rental.pk %}">Открыть</a>
+                {% if user.is_manager_role and rental.status == 'active' %}
+                  <a class="btn btn--sm" href="{% url 'rentals:rental_complete' rental.pk %}">Завершить</a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include 'includes/pagination.html' %}
+{% else %}
+  <div class="card empty-state">
+    <svg aria-hidden="true"><use href="#i-calendar"/></svg>
+    <h2>Прокатов пока нет</h2>
+    <p class="muted">{% if q or current_status %}По выбранным условиям ничего не найдено.{% else %}Оформите первый прокат — выберите велосипед в каталоге.{% endif %}</p>
+    <a class="btn btn--accent" href="{% url 'catalog:bike_list' %}">Перейти в каталог</a>
+  </div>
+{% endif %}
+{% endblock %}

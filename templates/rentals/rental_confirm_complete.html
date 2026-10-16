@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Завершение проката №{{ rental.pk }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumbs"><a href="{% url 'rentals:rental_list' %}">Все прокаты</a> / <a href="{% url 'rentals:rental_detail' rental.pk %}">Прокат №{{ rental.pk }}</a> / Завершение</div>
+
+<div class="card card__body" style="max-width: 620px">
+  {% if rental.status == 'active' %}
+    <h1>Завершить прокат №{{ rental.pk }}?</h1>
+    <p class="muted">Прокат получит статус «Завершена», а велосипед снова станет доступен для новых прокатов. Отменить это действие нельзя.</p>
+    <dl class="spec-list">
+      <dt>Клиент</dt><dd>{{ rental.client.full_name }}</dd>
+      <dt>Велосипед</dt><dd>{{ rental.bike.model }}</dd>
+      <dt>Период</dt><dd>{{ rental.start_datetime|date:"d.m.Y H:i" }} — {{ rental.end_datetime|date:"d.m.Y H:i" }}</dd>
+      <dt>Стоимость</dt><dd>{{ rental.total_cost }} ₽</dd>
+    </dl>
+    <form method="post" class="btn-row">
+      {% csrf_token %}
+      <button type="submit" class="btn"><svg><use href="#i-flag"/></svg>Да, завершить</button>
+      <a class="btn btn--ghost" href="{% url 'rentals:rental_detail' rental.pk %}">Нет, вернуться</a>
+    </form>
+  {% else %}
+    <h1>Прокат №{{ rental.pk }} уже не активен</h1>
+    <p class="muted">Текущий статус — «{{ rental.get_status_display }}». Завершить можно только активный прокат.</p>
+    <a class="btn btn--ghost" href="{% url 'rentals:rental_detail' rental.pk %}">← К прокату</a>
+  {% endif %}
+</div>
+{% endblock %}

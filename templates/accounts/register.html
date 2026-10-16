@@ -1,15 +1,43 @@
 {% extends 'base.html' %}
+{% load rental_ui %}
 
 {% block title %}Регистрация{% endblock %}
 
 {% block content %}
-<h1>Регистрация</h1>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Зарегистрироваться</button>
-</form>
-<p style="margin-top: 15px;">
-    Уже есть аккаунт? <a href="{% url 'accounts:login' %}">Войти</a>
-</p>
+<div class="card auth">
+  <div class="auth__side">
+    <div>
+      <h2 style="font-size: 1.6rem">Стать клиентом</h2>
+      <p style="color: rgb(255 255 255 / 82%)">После регистрации вы сможете сами оформлять прокат и видеть историю поездок.</p>
+    </div>
+    <svg aria-hidden="true"><use href="#i-ebike"/></svg>
+    <ul>
+      <li>Регистрация занимает минуту</li>
+      <li>Телефон нужен для связи по прокату</li>
+    </ul>
+  </div>
+  <div class="auth__form">
+    <h1>Регистрация</h1>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="form-grid">
+        <div class="form-grid form-grid--2">
+          {% form_field form.last_name %}
+          {% form_field form.first_name %}
+        </div>
+        <div class="form-grid form-grid--2">
+          {% form_field form.phone %}
+          {% form_field form.email %}
+        </div>
+        {% form_field form.username %}
+        <div class="form-grid form-grid--2">
+          {% form_field form.password1 %}
+          {% form_field form.password2 %}
+        </div>
+      </div>
+      <button type="submit" class="btn btn--accent btn--block" style="margin-top: 22px">Зарегистрироваться</button>
+    </form>
+    <p class="small muted" style="margin-top: 18px">Уже есть аккаунт? <a href="{% url 'accounts:login' %}">Войти</a></p>
+  </div>
+</div>
 {% endblock %}

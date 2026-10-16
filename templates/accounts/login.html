@@ -1,15 +1,39 @@
 {% extends 'base.html' %}
+{% load rental_ui %}
 
 {% block title %}Вход{% endblock %}
 
 {% block content %}
-<h1>Вход</h1>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Войти</button>
-</form>
-<p style="margin-top: 15px;">
-    Нет аккаунта? <a href="{% url 'accounts:register' %}">Зарегистрироваться</a>
-</p>
+<div class="card auth">
+  <div class="auth__side">
+    <div>
+      <h2 style="font-size: 1.6rem">С возвращением!</h2>
+      <p style="color: rgb(255 255 255 / 82%)">Войдите, чтобы искать велосипеды, оформлять прокат и следить за своими поездками.</p>
+    </div>
+    <svg aria-hidden="true"><use href="#i-bike"/></svg>
+    <ul>
+      <li>Стоимость считается автоматически</li>
+      <li>От 3 суток — скидка 10 %</li>
+      <li>Все прокаты — в одном списке</li>
+    </ul>
+  </div>
+  <div class="auth__form">
+    <h1>Вход</h1>
+    <p class="muted">Введите логин и пароль.</p>
+    {% if form.non_field_errors %}
+      <div class="alert alert--error form-errors"><svg><use href="#i-alert"/></svg><div>Неверный логин или пароль. Проверьте раскладку и Caps Lock.</div></div>
+    {% endif %}
+    {% if request.GET.next and not user.is_authenticated %}
+      <div class="alert alert--info form-errors"><svg><use href="#i-lock"/></svg><div>Эта страница доступна после входа.</div></div>
+    {% endif %}
+    <form method="post" class="form-grid" novalidate>
+      {% csrf_token %}
+      {% form_field form.username %}
+      {% form_field form.password %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="btn btn--accent btn--block">Войти</button>
+    </form>
+    <p class="small muted" style="margin-top: 18px">Нет аккаунта? <a href="{% url 'accounts:register' %}">Зарегистрироваться</a></p>
+  </div>
+</div>
 {% endblock %}

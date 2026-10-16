@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Прокат №{{ rental.pk }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumbs">
+  <a href="{% url 'rentals:rental_list' %}">{% if user.is_manager_role %}Все прокаты{% else %}Мои прокаты{% endif %}</a> / Прокат №{{ rental.pk }}
+</div>
+
+<article class="card receipt">
+  <div class="receipt__top">
+    <div>
+      <div class="receipt__label">Прокат</div>
+      <div class="receipt__no">№{{ rental.pk }}</div>
+      <div class="small muted">Оформлен {{ rental.created_at|date:"d.m.Y H:i" }}{% if rental.created_by %} · {{ rental.created_by.username }}{% endif %}</div>
+    </div>
+    <span class="badge badge--{{ rental.status }}">{{ rental.get_status_display }}</span>
+  </div>
+
+  <div class="receipt__grid">
+    <div>
+      <div class="receipt__label">Клиент</div>
+      <div class="receipt__value">{{ rental.client.full_name }}</div>
+      <div class="small muted">{{ rental.client.phone }}{% if rental.client.email %} · {{ rental.client.email }}{% endif %}</div>
+    </div>
+    <div>
+      <div class="receipt__label">Велосипед</div>
+      <div class="receipt__value"><a href="{% url 'catalog:bike_detail' rental.bike.pk %}">{{ rental.bike.model }}</a></div>
+      <div class="small muted">{{ rental.bike.bike_type.name }} · <span class="mono">{{ rental.bike.serial_number }}</span></div>
+    </div>
+    <div>
+      <div class="receipt__label">Начало</div>
+      <div class="receipt__value">{{ rental.start_datetime|date:"d E Y, H:i" }}</div>
+    </div>
+    <div>
+      <div class="receipt__label">Окончание</div>
+      <div class="receipt__value">{{ rental.end_datetime|date:"d E Y, H:i" }}</div>
+    </div>
+  </div>
+
+  <div class="receipt__cost">
+    <div class="summary__row"><span>{{ rental.bike.bike_type.base_price_per_day|floatformat:0 }} ₽ × {{ days }} сут.</span><strong>{{ base_cost|floatformat:2 }} ₽</strong></div>
+    {% if has_discount %}
+      <div class="summary__row summary__row--discount"><span>Скидка {{ discount_percent }} % (от 3 суток)</span><strong>учтена</strong></div>
+    {% endif %}
+    <div class="summary__total"><span>Итого</span><strong>{{ rental.total_cost }} ₽</strong></div>
+  </div>
+</article>
+
+<div class="btn-row" style="margin-top: 20px">
+  {% if user.is_manager_role and rental.status == 'active' %}
+    <a class="btn" href="{% url 'rentals:rental_complete' rental.pk %}"><svg><use href="#i-flag"/></svg>Завершить прокат</a>
+  {% endif %}
+  {% if user.is_admin_role %}
+    <a class="btn btn--ghost" href="{% url 'rentals:rental_edit' rental.pk %}"><svg><use href="#i-edit"/></svg>Редактировать</a>
+  {% endif %}
+  <a class="btn btn--ghost" href="{% url 'rentals:rental_list' %}">← К списку</a>
+</div>
+{% endblock %}

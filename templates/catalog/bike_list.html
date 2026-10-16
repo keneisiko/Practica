@@ -1,206 +1,132 @@
 {% extends 'base.html' %}
+{% load rental_ui %}
 
 {% block title %}Каталог велосипедов{% endblock %}
 
-{% block extra_css %}
-<style>
-    .filters {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        align-items: flex-end;
-    }
-    .filters .field { display: flex; flex-direction: column; }
-    .filters label { font-size: 12px; color: #666; margin-bottom: 4px; }
-    .filters input, .filters select {
-        padding: 8px 10px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        font-size: 14px;
-        min-width: 150px;
-    }
-    .filters button {
-        padding: 9px 20px;
-        background: #3498db;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-    }
-    .filters button:hover { background: #2980b9; }
-
-    .bike-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 20px;
-    }
-    .bike-card {
-        background: white;
-        border-radius: 8px;
-        padding: 20px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        display: flex;
-        flex-direction: column;
-    }
-    .bike-card h3 { margin-bottom: 10px; color: #2c3e50; }
-    .bike-card .info { font-size: 14px; color: #555; margin-bottom: 6px; }
-    .bike-card .info strong { color: #333; }
-    .bike-card .status {
-        display: inline-block;
-        padding: 3px 10px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: bold;
-        margin: 10px 0;
-        width: fit-content;
-    }
-    .status.available { background: #d4edda; color: #155724; }
-    .status.rented { background: #f8d7da; color: #721c24; }
-    .status.maintenance { background: #fff3cd; color: #856404; }
-    .bike-card .actions {
-        margin-top: auto;
-        padding-top: 15px;
-        display: flex;
-        gap: 10px;
-    }
-    .bike-card .actions a, .bike-card .actions button {
-        flex: 1;
-        text-align: center;
-        padding: 8px 12px;
-        border-radius: 4px;
-        font-size: 13px;
-        text-decoration: none;
-        border: none;
-        cursor: pointer;
-    }
-    .btn-detail { background: #ecf0f1; color: #333; }
-    .btn-detail:hover { background: #d5dbdb; }
-    .btn-rent { background: #27ae60; color: white; }
-    .btn-rent:hover { background: #229954; }
-    .btn-rent:disabled, .btn-rent.disabled {
-        background: #ccc;
-        color: #666;
-        cursor: not-allowed;
-    }
-
-    .empty { text-align: center; padding: 60px 20px; color: #777; font-size: 16px; }
-    .pagination {
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        margin-top: 30px;
-        flex-wrap: wrap;
-    }
-    .pagination a, .pagination span {
-        padding: 8px 14px;
-        background: white;
-        border-radius: 4px;
-        text-decoration: none;
-        color: #333;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .pagination a:hover { background: #3498db; color: white; }
-    .pagination .current { background: #2c3e50; color: white; }
-</style>
-{% endblock %}
-
 {% block content %}
-<h1>Каталог велосипедов</h1>
+<section class="hero">
+  <div>
+    <h1>Каталог велосипедов</h1>
+    <p>Горные, шоссейные, городские, детские и электровелосипеды. Выберите велосипед, укажите время — стоимость посчитается автоматически.</p>
+  </div>
+  <div class="hero__stats">
+    <div class="stat-pill"><strong>{{ available_total }}</strong><span>доступно сейчас</span></div>
+    <div class="stat-pill"><strong>{{ bikes_total }}</strong><span>велосипедов в парке</span></div>
+  </div>
+  <svg class="hero__art" aria-hidden="true"><use href="#i-bike"/></svg>
+</section>
 
-<form method="get" class="filters">
-    <div class="field">
-        <label for="q">Поиск</label>
-        <input type="text" id="q" name="q" placeholder="Модель или серийник"
-               value="{{ current_filters.q }}">
+{% if not user.is_authenticated %}
+  <div class="notice">
+    <svg><use href="#i-lock"/></svg>
+    <span>Вы смотрите каталог как посетитель. Войдите, чтобы искать, фильтровать и оформлять прокат.</span>
+    <a class="btn btn--accent btn--sm" href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">Войти</a>
+  </div>
+{% elif not user.can_search_catalog %}
+  <div class="notice">
+    <svg><use href="#i-lock"/></svg>
+    <span>Роль «{{ user.role_label }}» позволяет только просматривать каталог. Для оформления проката нужна роль клиента.</span>
+  </div>
+{% endif %}
+
+{% if can_search %}
+  <div class="type-chips" role="list" aria-label="Тип велосипеда">
+    <a class="chip{% if not current_filters.bike_type %} is-active{% endif %}" href="{% querystring bike_type=None page=None %}" role="listitem">
+      Все типы
+    </a>
+    {% for type in bike_types %}
+      <a class="chip {{ type|type_class }}{% if current_filters.bike_type == type.pk|stringformat:'s' %} is-active{% endif %}"
+         href="{% querystring bike_type=type.pk page=None %}" role="listitem">
+        <span class="chip__dot"></span>{{ type.name }} <span class="chip__count">{{ type.available }}</span>
+      </a>
+    {% endfor %}
+  </div>
+
+  <form method="get" class="card toolbar" role="search">
+    <div class="field search-field">
+      <label for="q">Поиск</label>
+      <div class="search-input">
+        <svg aria-hidden="true"><use href="#i-search"/></svg>
+        <input type="search" id="q" name="q" placeholder="Модель или серийный номер" value="{{ current_filters.q }}">
+      </div>
     </div>
-
     <div class="field">
-        <label for="bike_type">Тип</label>
-        <select id="bike_type" name="bike_type">
-            <option value="">Все типы</option>
-            {% for type in bike_types %}
-                <option value="{{ type.id }}"
-                        {% if current_filters.bike_type == type.id|stringformat:"s" %}selected{% endif %}>
-                    {{ type.name }}
-                </option>
-            {% endfor %}
-        </select>
+      <label for="bike_type">Тип</label>
+      <select id="bike_type" name="bike_type">
+        <option value="">Все типы</option>
+        {% for type in bike_types %}
+          <option value="{{ type.pk }}" {% if current_filters.bike_type == type.pk|stringformat:'s' %}selected{% endif %}>{{ type.name }}</option>
+        {% endfor %}
+      </select>
     </div>
-
     <div class="field">
-        <label for="status">Статус</label>
-        <select id="status" name="status">
-            <option value="">Все</option>
-            <option value="available" {% if current_filters.status == 'available' %}selected{% endif %}>Доступен</option>
-            <option value="rented" {% if current_filters.status == 'rented' %}selected{% endif %}>В прокате</option>
-            <option value="maintenance" {% if current_filters.status == 'maintenance' %}selected{% endif %}>Обслуживание</option>
-        </select>
+      <label for="status">Доступность</label>
+      <select id="status" name="status">
+        <option value="">Любая</option>
+        {% for value, label in statuses %}
+          <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
     </div>
-
     <div class="field">
-        <label for="sort">Сортировка</label>
-        <select id="sort" name="sort">
-            <option value="model" {% if current_filters.sort == 'model' %}selected{% endif %}>Модель (А-Я)</option>
-            <option value="-model" {% if current_filters.sort == '-model' %}selected{% endif %}>Модель (Я-А)</option>
-            <option value="bike_type__base_price_per_day" {% if current_filters.sort == 'bike_type__base_price_per_day' %}selected{% endif %}>Цена (по возрастанию)</option>
-            <option value="-bike_type__base_price_per_day" {% if current_filters.sort == '-bike_type__base_price_per_day' %}selected{% endif %}>Цена (по убыванию)</option>
-        </select>
+      <label for="sort">Сортировка</label>
+      <select id="sort" name="sort">
+        {% for value, label in sorts.items %}
+          <option value="{{ value }}" {% if current_filters.sort == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
     </div>
+    <div class="btn-row">
+      <button type="submit" class="btn">Найти</button>
+      {% if has_filters %}<a class="btn btn--ghost" href="{% url 'catalog:bike_list' %}">Сбросить</a>{% endif %}
+    </div>
+  </form>
+{% endif %}
 
-    <button type="submit">Применить</button>
-    <a href="{% url 'catalog:bike_list' %}" style="padding: 9px 20px; color: #666; text-decoration: none;">Сбросить</a>
-</form>
+{% if user.is_authenticated and user.is_admin_role %}
+  <div class="page-head" style="margin-bottom: 14px">
+    <p>Найдено: <strong>{{ page_obj.paginator.count }}</strong></p>
+    <a class="btn btn--accent" href="{% url 'catalog:bike_create' %}"><svg><use href="#i-plus"/></svg>Добавить велосипед</a>
+  </div>
+{% endif %}
 
 {% if bikes %}
-    <div class="bike-grid">
-        {% for bike in bikes %}
-            <div class="bike-card">
-                <h3>{{ bike.model }}</h3>
-                <div class="info"><strong>Серийный номер:</strong> {{ bike.serial_number }}</div>
-                <div class="info"><strong>Тип:</strong> {{ bike.bike_type.name }}</div>
-                <div class="info"><strong>Цена за сутки:</strong> {{ bike.bike_type.base_price_per_day }} ₽</div>
-                <span class="status {{ bike.status }}">{{ bike.get_status_display }}</span>
-
-                <div class="actions">
-                    <a href="{% url 'catalog:bike_detail' bike.pk %}" class="btn-detail">Подробнее</a>
-                    {% if user.is_authenticated and bike.is_available %}
-                        <a href="{% url 'rentals:rental_create' %}?bike={{ bike.pk }}" class="btn-rent">Оформить</a>
-                    {% else %}
-                        <button class="btn-rent disabled" disabled>Оформить</button>
-                    {% endif %}
-                </div>
-            </div>
-        {% endfor %}
-    </div>
-
-    {% if page_obj.has_other_pages %}
-        <div class="pagination">
-            {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}&q={{ current_filters.q }}&bike_type={{ current_filters.bike_type }}&status={{ current_filters.status }}&sort={{ current_filters.sort }}">← Назад</a>
-            {% endif %}
-
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <span class="current">{{ num }}</span>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                    <a href="?page={{ num }}&q={{ current_filters.q }}&bike_type={{ current_filters.bike_type }}&status={{ current_filters.status }}&sort={{ current_filters.sort }}">{{ num }}</a>
-                {% endif %}
-            {% endfor %}
-
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}&q={{ current_filters.q }}&bike_type={{ current_filters.bike_type }}&status={{ current_filters.status }}&sort={{ current_filters.sort }}">Вперёд →</a>
-            {% endif %}
+  <div class="bike-grid">
+    {% for bike in bikes %}
+      <article class="card bike-card {{ bike.bike_type|type_class }}">
+        <div class="bike-card__art">
+          <span class="bike-card__type">{{ bike.bike_type.name }}</span>
+          <span class="badge badge--{{ bike.status }}">{{ bike.get_status_display }}</span>
+          {% include 'includes/bike_icon.html' with bike_type=bike.bike_type %}
+          {% if user.is_authenticated and user.is_admin_role %}
+            <span class="bike-card__admin"><a href="{% url 'catalog:bike_edit' bike.pk %}">✎ Изменить</a></span>
+          {% endif %}
         </div>
-    {% endif %}
+        <div class="bike-card__body">
+          <h2 class="bike-card__title"><a href="{% url 'catalog:bike_detail' bike.pk %}">{{ bike.model }}</a></h2>
+          <span class="bike-card__sn">{{ bike.serial_number }}</span>
+          <div class="price"><strong>{{ bike.bike_type.base_price_per_day|floatformat:0 }} ₽</strong><span>/ сутки</span></div>
+          <div class="bike-card__actions">
+            <a class="btn btn--ghost btn--sm" href="{% url 'catalog:bike_detail' bike.pk %}">Подробнее</a>
+            {% if user.is_authenticated and user.can_rent %}
+              {% if bike.is_available %}
+                <a class="btn btn--accent btn--sm" href="{% url 'rentals:rental_create' %}?bike={{ bike.pk }}">Оформить</a>
+              {% else %}
+                <button class="btn btn--sm" disabled title="Велосипед сейчас недоступен">Недоступен</button>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+  {% include 'includes/pagination.html' %}
 {% else %}
-    <div class="empty">
-        <p>Ничего не найдено.</p>
-        <p><a href="{% url 'catalog:bike_list' %}">Сбросить фильтры</a></p>
-    </div>
+  <div class="card empty-state">
+    <svg aria-hidden="true"><use href="#i-bike"/></svg>
+    <h2>Ничего не нашлось</h2>
+    <p class="muted">Попробуйте изменить запрос или сбросить фильтры.</p>
+    <a class="btn btn--ghost" href="{% url 'catalog:bike_list' %}">Сбросить фильтры</a>
+  </div>
 {% endif %}
 {% endblock %}

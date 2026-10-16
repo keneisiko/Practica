@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load rental_ui %}
+
+{% block title %}Редактирование проката №{{ rental.pk }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumbs"><a href="{% url 'rentals:rental_list' %}">Все прокаты</a> / <a href="{% url 'rentals:rental_detail' rental.pk %}">Прокат №{{ rental.pk }}</a> / Редактирование</div>
+<div class="page-head">
+  <div>
+    <h1>Редактирование проката №{{ rental.pk }}</h1>
+    <p>Стоимость пересчитается автоматически по тарифу выбранного велосипеда. Статус велосипеда обновится сам.</p>
+  </div>
+</div>
+
+<form method="post" class="card card__body" style="max-width: 760px" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+    <div class="alert alert--error form-errors"><svg><use href="#i-alert"/></svg><div>{% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}</div></div>
+  {% endif %}
+  <div class="form-grid">
+    <div class="form-grid form-grid--2">
+      {% form_field form.client %}
+      {% form_field form.bike %}
+    </div>
+    <div class="form-grid form-grid--2">
+      {% form_field form.start_datetime %}
+      {% form_field form.end_datetime %}
+    </div>
+    {% form_field form.status %}
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn--accent"><svg><use href="#i-check"/></svg>Сохранить</button>
+    <a class="btn btn--ghost" href="{% url 'rentals:rental_detail' rental.pk %}">Отмена</a>
+  </div>
+</form>
+{% endblock %}
