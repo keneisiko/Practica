@@ -1,40 +1,44 @@
-from .forms import RegisterForm
-from django.views.generic import FormView
-from django.urls import reverse_lazy
-from django.contrib.auth import login
 from django.contrib import messages
+from django.contrib.auth import login
 from django.db import transaction
-from .models import User
+from django.shortcuts import redirect
+from django.urls import reverse_lazy
+from django.views.generic import FormView
+
 from rentals.models import Client
 
-# Create your views here.
+from .forms import RegisterForm
+from .models import User
+
 
 class RegisterView(FormView):
-    form_class = RegisterForm 
+    form_class = RegisterForm
     template_name = 'accounts/register.html'
     success_url = reverse_lazy('catalog:bike_list')
 
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect('catalog:bike_list')
+        return super().dispatch(request, *args, **kwargs)
+
     @transaction.atomic
     def form_valid(self, form):
-        username = form.cleaned_data['username']
-        password = form.cleaned_data['password1']
-        email = form.cleaned_data.get('email') or None
-
+        email = form.cleaned_data.get('email')
         user = User.objects.create_user(
-            username = username,
-            password = password,
-            email = email,
+            username=form.cleaned_data['username'],
+            password=form.cleaned_data['password1'],
+            email=email or '',
+            first_name=form.cleaned_data['first_name'],
+            last_name=form.cleaned_data['last_name'],
             role=User.Role.CLIENT,
         )
-        client = Client.objects.create(
+        Client.objects.create(
+            user=user,
             last_name=form.cleaned_data['last_name'],
             first_name=form.cleaned_data['first_name'],
-            email=email,
             phone=form.cleaned_data['phone'],
-            user=user,
+            email=email,
         )
         login(self.request, user)
-        messages.success(self.request, 'Регистрация прошла успешно')
-        return super().form_valid(form)
-        
-        
+        messages.success(self.request, f'Добро пожаловать, {user.first_name}! Регистрация прошла успешно.')
+        return redirect(self.get_success_url())
