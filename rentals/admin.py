@@ -15,7 +15,7 @@ class ClientAdmin(admin.ModelAdmin):
 class RentalAdmin(admin.ModelAdmin):
     list_display = ('id', 'client', 'bike', 'start_datetime', 'end_datetime', 'total_cost', 'status')  # Поля, которые будут отображаться в списке аренд
     list_filter = ('status', 'start_datetime',)  # Фильтры по статусу и датам
-    search_fields = ('client__first_name', 'client__last_name', 'bike__name', 'bike__serial_number')  # Поля, по которым можно искать аренды
+    search_fields = ('client__first_name', 'client__last_name', 'bike__model', 'bike__serial_number')  # Поля, по которым можно искать аренды
     date_hierarchy = 'start_datetime'  # Иерархия по дате начала аренды
     autocomplete_fields = ('client', 'bike', 'created_by')  # Поля, для которых будет включено автозаполнение
     readonly_fields = ('created_at',)  # Поля, которые будут доступны только для чтения
