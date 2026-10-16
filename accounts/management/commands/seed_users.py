@@ -31,7 +31,8 @@ class Command(BaseCommand):
             )
             user.role = role
             user.first_name, user.last_name = first_name, last_name
-            user.is_staff = role == User.Role.ADMIN  # администратору открыта и Django-админка
+            # администратору открыта и Django-админка с полными правами
+            user.is_staff = user.is_superuser = role == User.Role.ADMIN
             user.set_password(password)
             user.save()
             if role == User.Role.CLIENT:
