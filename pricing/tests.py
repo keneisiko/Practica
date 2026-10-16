@@ -22,7 +22,7 @@ class RentalCostTest(TestCase):
             start_datetime=datetime.datetime(2026, 10, 10, 10, 0),
             end_datetime=datetime.datetime(2026, 10, 13, 10, 0),
         )
-        self.assertEqual(result, Decimal('2160.00'))  # 4 days * 800 = 3200 - 10% = 2880
+        self.assertEqual(result, Decimal('2160.00'))  # 3 суток × 800 = 2400, скидка 10 % → 2160
     def test_two_day_duration_rental(self):
         result = calculate_rental_cost(
             bike_type=FakeBikeType(),
