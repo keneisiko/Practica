@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block title %}Не найдено{% endblock %}
+
+{% block content %}
+<div class="card card__body error-page">
+  <div class="error-page__code">404</div>
+  <h1>Страница не найдена</h1>
+  <p class="muted">Возможно, запись удалена или у вас нет к ней доступа.</p>
+  <a class="btn" href="{% url 'catalog:bike_list' %}" style="margin-top: 12px">В каталог</a>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% if page_obj.has_other_pages %}
+  <nav class="pagination" aria-label="Страницы">
+    {% if page_obj.has_previous %}
+      <a href="{% querystring page=page_obj.previous_page_number %}" aria-label="Предыдущая страница">←</a>
+    {% endif %}
+    {% for num in page_obj.paginator.page_range %}
+      {% if num == page_obj.number %}
+        <span class="is-current" aria-current="page">{{ num }}</span>
+      {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <a href="{% querystring page=num %}">{{ num }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}
+      <a href="{% querystring page=page_obj.next_page_number %}" aria-label="Следующая страница">→</a>
+    {% endif %}
+  </nav>
+{% endif %}

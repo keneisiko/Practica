@@ -1,86 +1,79 @@
-<!DOCTYPE html>
+{% load static rental_ui %}<!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>{% block title %}Прокат велосипедов{% endblock %}</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Arial, sans-serif; background: #f5f5f5; color: #333; }
-        header { background: #2c3e50; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
-        header a { color: white; text-decoration: none; margin-left: 20px; }
-        header a:hover { text-decoration: underline; }
-        .logo { font-size: 20px; font-weight: bold; }
-        .nav { display: flex; align-items: center; }
-        .nav form { display: inline; margin-left: 20px; }
-        .nav button { background: none; border: none; color: white; cursor: pointer; font-size: 16px; }
-        .nav button:hover { text-decoration: underline; }
-        main { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
-        .messages { margin-bottom: 20px; }
-        .message { padding: 10px 15px; border-radius: 4px; margin-bottom: 10px; }
-        .message.success { background: #d4edda; color: #155724; }
-        .message.error { background: #f8d7da; color: #721c24; }
-        .message.warning { background: #fff3cd; color: #856404; }
-        .message.info { background: #d1ecf1; color: #0c5460; }
-        form p { margin-bottom: 15px; }
-        form label { display: block; margin-bottom: 5px; font-weight: bold; }
-        form input[type="text"],
-        form input[type="password"],
-        form input[type="email"],
-        form input[type="datetime-local"] {
-            width: 100%;
-            padding: 8px 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        button[type="submit"], .btn {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            text-decoration: none;
-            display: inline-block;
-        }
-        button[type="submit"]:hover, .btn:hover { background: #2980b9; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Прокат велосипедов{% endblock %} · ВелоПрокат</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23e5732b'/><g fill='none' stroke='white' stroke-width='4' stroke-linecap='round'><circle cx='18' cy='40' r='9'/><circle cx='46' cy='40' r='9'/><path d='M18 40 27 24h13l6 16M27 24l7 16'/></g></svg>">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <header>
-        <a href="/" class="logo">🚲 Прокат велосипедов</a>
-        <nav class="nav">
-            <a href="{% url 'catalog:bike_list' %}">Каталог</a>
-            {% if user.is_authenticated %}
-                <a href="#">Мои прокаты</a>
-                {% if user.role == 'manager' or user.role == 'admin' %}
-                    <a href="#">Все прокаты</a>
-                {% endif %}
-                {% if user.role == 'admin' %}
-                    <a href="/admin/">Админка</a>
-                {% endif %}
-                <form method="post" action="{% url 'accounts:logout' %}">
-                    {% csrf_token %}
-                    <button type="submit">Выйти ({{ user.username }})</button>
-                </form>
-            {% else %}
-                <a href="{% url 'accounts:login' %}">Войти</a>
-                <a href="{% url 'accounts:register' %}">Регистрация</a>
-            {% endif %}
-        </nav>
-    </header>
+  {% include 'includes/icons.html' %}
 
-    <main>
-        {% if messages %}
-            <div class="messages">
-                {% for message in messages %}
-                    <div class="message {{ message.tags }}">{{ message }}</div>
-                {% endfor %}
-            </div>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="{% url 'catalog:bike_list' %}">
+        <span class="brand__mark"><svg><use href="#i-bike"/></svg></span>
+        <span>ВелоПрокат<small>прокат велосипедов</small></span>
+      </a>
+
+      {% with section=request.resolver_match.url_name %}
+      <nav class="main-nav" aria-label="Главное меню">
+        <a href="{% url 'catalog:bike_list' %}" {% if section == 'bike_list' or section == 'bike_detail' %}aria-current="page"{% endif %}>Каталог</a>
+        {% if user.is_authenticated and user.can_rent %}
+          <a href="{% url 'rentals:rental_create' %}" {% if section == 'rental_create' %}aria-current="page"{% endif %}>Оформить прокат</a>
+          <a href="{% url 'rentals:rental_list' %}" {% if section == 'rental_list' or section == 'rental_detail' %}aria-current="page"{% endif %}>
+            {% if user.is_manager_role %}Все прокаты{% else %}Мои прокаты{% endif %}
+          </a>
         {% endif %}
+        {% if user.is_authenticated and user.is_admin_role %}
+          <span class="nav-sep" aria-hidden="true"></span>
+          <a href="{% url 'catalog:bike_create' %}" {% if section == 'bike_create' %}aria-current="page"{% endif %}>+ Велосипед</a>
+          <a href="{% url 'rentals:client_list' %}" {% if section == 'client_list' or section == 'client_create' or section == 'client_edit' %}aria-current="page"{% endif %}>Клиенты</a>
+          {% if user.is_staff %}<a href="{% url 'admin:index' %}">Django-админка</a>{% endif %}
+        {% endif %}
+      </nav>
+      {% endwith %}
 
-        {% block content %}{% endblock %}
-    </main>
+      <div class="user-box">
+        {% if user.is_authenticated %}
+          <div class="user-box__name">{{ user.get_full_name|default:user.username }}<small>{{ user.role_label }}</small></div>
+          <span class="avatar" title="{{ user.username }}">{{ user|initials }}</span>
+          <form method="post" action="{% url 'accounts:logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-header">Выйти</button>
+          </form>
+        {% else %}
+          <a class="btn-header" href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">Войти</a>
+          <a class="btn-header btn-header--solid" href="{% url 'accounts:register' %}">Регистрация</a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <main>
+    {% if messages %}
+      <ul class="messages" role="status">
+        {% for message in messages %}
+          <li class="alert alert--{{ message.tags|default:'info' }}">
+            <svg><use href="#{% if message.tags == 'success' %}i-check{% elif message.tags == 'error' or message.tags == 'warning' %}i-alert{% else %}i-info{% endif %}"/></svg>
+            <span>{{ message }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <span>© {% now "Y" %} ВелоПрокат — информационная система проката велосипедов</span>
+      <span>Тариф: базовая цена типа × сутки, от 3 суток — скидка 10 %</span>
+    </div>
+  </footer>
+
+  {% block extra_js %}{% endblock %}
 </body>
 </html>

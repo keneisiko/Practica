@@ -3,6 +3,7 @@ from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
 from catalog.models import BikeType, Bike
+from pricing.services import calculate_rental_cost
 from rentals.models import Client, Rental
 
 
@@ -100,6 +101,8 @@ class Command(BaseCommand):
 
         # Прокаты — пересоздаём, чтобы не было дубликатов
         Rental.objects.all().delete()
+        # Статус «В прокате» должен соответствовать активному прокату: сбрасываем и выставим ниже.
+        Bike.objects.filter(status=Bike.Status.RENTED).update(status=Bike.Status.AVAILABLE)
 
         now = timezone.now()
         clients = list(Client.objects.all())
@@ -130,11 +133,8 @@ class Command(BaseCommand):
             bike = bikes[b_idx]
             start = now + timedelta(days=start_off)
             end = now + timedelta(days=end_off)
-            days = max(1, (end - start).days)
-            cost = bike.bike_type.base_price_per_day * days
-            if days >= 3:
-                cost = cost * Decimal('0.9')
-            cost = cost.quantize(Decimal('0.01'))
+            # Стоимость считает тот же сервис, что и приложение, — формула живёт в одном месте.
+            cost = calculate_rental_cost(bike.bike_type, start, end)
 
             Rental.objects.create(
                 client=client,

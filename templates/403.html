@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}Нет доступа{% endblock %}
+
+{% block content %}
+<div class="card card__body error-page">
+  <div class="error-page__code">403</div>
+  <h1>Действие недоступно</h1>
+  <p class="muted">{{ exception|default:"У вашей роли нет доступа к этой функции." }}</p>
+  {% if user.is_authenticated %}<p class="small muted">Вы вошли как {{ user.username }} ({{ user.role_label }}).</p>{% endif %}
+  <div class="btn-row" style="justify-content: center; margin-top: 18px">
+    <a class="btn" href="{% url 'catalog:bike_list' %}">В каталог</a>
+    {% if user.is_authenticated %}
+      <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="btn btn--ghost" type="submit">Войти под другой ролью</button></form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

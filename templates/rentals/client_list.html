@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}Клиенты{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Клиенты</h1>
+    <p>Всего: {{ page_obj.paginator.count }}. Добавление и редактирование клиентов доступно администратору.</p>
+  </div>
+  <div class="btn-row">
+    <form method="get" class="btn-row" role="search">
+      <div class="search-input" style="min-width: 260px">
+        <svg aria-hidden="true"><use href="#i-search"/></svg>
+        <input type="search" name="q" value="{{ q }}" placeholder="Фамилия, телефон, email" aria-label="Поиск клиентов">
+      </div>
+      <button class="btn btn--ghost" type="submit">Найти</button>
+    </form>
+    <a class="btn btn--accent" href="{% url 'rentals:client_create' %}"><svg><use href="#i-plus"/></svg>Добавить клиента</a>
+  </div>
+</div>
+
+{% if clients %}
+  <div class="card table-wrap">
+    <table class="table table--cards">
+      <thead><tr><th>Клиент</th><th>Телефон</th><th>Email</th><th>Аккаунт</th><th>Добавлен</th><th></th></tr></thead>
+      <tbody>
+        {% for client in clients %}
+          <tr>
+            <td data-label="Клиент" class="cell-main">{{ client.full_name }}</td>
+            <td data-label="Телефон" class="nowrap">{{ client.phone }}</td>
+            <td data-label="Email">{{ client.email|default:"—" }}</td>
+            <td data-label="Аккаунт">{% if client.user %}<span class="badge badge--role">{{ client.user.username }}</span>{% else %}<span class="muted">без аккаунта</span>{% endif %}</td>
+            <td data-label="Добавлен" class="nowrap">{{ client.created_at|date:"d.m.Y" }}</td>
+            <td data-label="" class="num"><a class="btn btn--ghost btn--sm" href="{% url 'rentals:client_edit' client.pk %}"><svg><use href="#i-edit"/></svg>Изменить</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include 'includes/pagination.html' %}
+{% else %}
+  <div class="card empty-state">
+    <svg aria-hidden="true"><use href="#i-search"/></svg>
+    <h2>Клиенты не найдены</h2>
+    <p class="muted">Измените запрос или добавьте нового клиента.</p>
+  </div>
+{% endif %}
+{% endblock %}

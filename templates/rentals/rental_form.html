@@ -1,126 +1,118 @@
 {% extends 'base.html' %}
+{% load rental_ui %}
 
 {% block title %}Оформление проката{% endblock %}
 
-{% block extra_css %}
-<style>
-    .rental-form {
-        background: white;
-        border-radius: 8px;
-        padding: 30px;
-        max-width: 600px;
-        margin: 0 auto;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .rental-form h1 {
-        margin-bottom: 25px;
-        color: #2c3e50;
-    }
-    .rental-form form p {
-        margin-bottom: 18px;
-    }
-    .rental-form form label {
-        display: block;
-        margin-bottom: 6px;
-        font-weight: bold;
-        color: #333;
-    }
-    .rental-form form input,
-    .rental-form form select,
-    .rental-form form textarea {
-        width: 100%;
-        padding: 10px 12px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        font-size: 14px;
-        font-family: inherit;
-    }
-    .rental-form form input:focus,
-    .rental-form form select:focus {
-        outline: none;
-        border-color: #3498db;
-    }
-    .rental-form .errors {
-        background: #f8d7da;
-        color: #721c24;
-        padding: 10px 15px;
-        border-radius: 4px;
-        margin-bottom: 20px;
-        font-size: 14px;
-    }
-    .rental-form .errors ul {
-        margin: 0;
-        padding-left: 20px;
-    }
-    .rental-form .actions {
-        display: flex;
-        gap: 12px;
-        margin-top: 25px;
-    }
-    .rental-form .actions button,
-    .rental-form .actions a {
-        padding: 11px 24px;
-        border-radius: 4px;
-        font-size: 14px;
-        border: none;
-        cursor: pointer;
-        text-decoration: none;
-        text-align: center;
-    }
-    .rental-form .actions button {
-        background: #27ae60;
-        color: white;
-        flex: 1;
-    }
-    .rental-form .actions button:hover {
-        background: #229954;
-    }
-    .rental-form .actions a {
-        background: #ecf0f1;
-        color: #333;
-    }
-    .rental-form .actions a:hover {
-        background: #d5dbdb;
-    }
-    .rental-form .hint {
-        font-size: 13px;
-        color: #777;
-        margin-top: 15px;
-        padding: 10px 12px;
-        background: #f8f9fa;
-        border-left: 3px solid #3498db;
-        border-radius: 3px;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="rental-form">
+<div class="page-head">
+  <div>
+    <div class="breadcrumbs"><a href="{% url 'catalog:bike_list' %}">Каталог</a> / Оформление проката</div>
     <h1>Оформление проката</h1>
+    <p>Выберите {% if user.is_manager_role %}клиента, {% endif %}доступный велосипед и время — стоимость рассчитается автоматически.</p>
+  </div>
+</div>
+
+<div class="grid-2">
+  <form method="post" class="card card__body" novalidate id="rental-form"
+        data-estimate-url="{% url 'rentals:rental_estimate' %}">
+    {% csrf_token %}
 
     {% if form.non_field_errors %}
-        <div class="errors">
-            <ul>
-                {% for error in form.non_field_errors %}
-                    <li>{{ error }}</li>
-                {% endfor %}
-            </ul>
-        </div>
+      <div class="alert alert--error form-errors">
+        <svg><use href="#i-alert"/></svg>
+        <div>{% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}</div>
+      </div>
     {% endif %}
 
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-
-        <div class="hint">
-            Стоимость рассчитывается автоматически: базовая цена за сутки × количество суток.
-            При прокате от 3 суток действует скидка 10 %.
+    {% if 'client' in form.fields %}
+      {% form_field form.client %}
+      <div style="height: 18px"></div>
+    {% else %}
+      <div class="client-box">
+        <span class="avatar">{{ user|initials }}</span>
+        <div>
+          <div class="small muted">Прокат оформляется на вас</div>
+          <strong>{% if client_profile %}{{ client_profile.full_name }} · {{ client_profile.phone }}{% else %}{{ user.username }}{% endif %}</strong>
         </div>
+      </div>
+    {% endif %}
 
-        <div class="actions">
-            <a href="{% url 'catalog:bike_list' %}">Отмена</a>
-            <button type="submit">Оформить прокат</button>
-        </div>
-    </form>
+    <div class="form-grid">
+      {% form_field form.bike %}
+      <div class="form-grid form-grid--2">
+        {% form_field form.start_datetime %}
+        {% form_field form.end_datetime %}
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn--accent"><svg><use href="#i-check"/></svg>Оформить прокат</button>
+      <a class="btn btn--ghost" href="{% url 'catalog:bike_list' %}">Отмена</a>
+    </div>
+  </form>
+
+  <aside class="card summary sticky" id="summary" aria-live="polite">
+    <div class="summary__head"><h2>Расчёт стоимости</h2></div>
+    <div class="summary__body">
+      <div class="summary__row"><span>Цена за сутки</span><strong data-out="price">—</strong></div>
+      <div class="summary__row"><span>Количество суток</span><strong data-out="days">—</strong></div>
+      <div class="summary__row"><span>Без скидки</span><strong data-out="base">—</strong></div>
+      <div class="summary__row summary__row--discount" data-out="discount-row" hidden>
+        <span>Скидка {{ discount_percent }} %</span><strong>применена</strong>
+      </div>
+      <div class="summary__total"><span>Итого</span><strong data-out="total">— ₽</strong></div>
+      <div class="summary__hint" data-out="hint">Неполные сутки считаются как полные. При прокате от {{ discount_days }} суток — скидка {{ discount_percent }} %.</div>
+    </div>
+  </aside>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Предварительный расчёт: тот же серверный сервис, что и при сохранении проката.
+  (function () {
+    const form = document.getElementById('rental-form');
+    const summary = document.getElementById('summary');
+    const out = (name) => summary.querySelector(`[data-out="${name}"]`);
+    const fields = ['id_bike', 'id_start_datetime', 'id_end_datetime'].map((id) => document.getElementById(id));
+    const defaultHint = out('hint').textContent;
+    const rub = (value) => Number(value).toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + ' ₽';
+    let timer = null;
+
+    function reset(message) {
+      ['price', 'days', 'base'].forEach((name) => { out(name).textContent = '—'; });
+      out('total').textContent = '— ₽';
+      out('discount-row').hidden = true;
+      out('hint').textContent = message || defaultHint;
+    }
+
+    async function estimate() {
+      const [bike, start, end] = fields.map((field) => field.value);
+      if (!bike || !start || !end) { reset(); return; }
+      summary.classList.add('is-loading');
+      try {
+        const params = new URLSearchParams({ bike, start, end });
+        const response = await fetch(`${form.dataset.estimateUrl}?${params}`, { headers: { Accept: 'application/json' } });
+        const data = await response.json();
+        if (!data.ok) { reset(data.error); return; }
+        out('price').textContent = rub(data.price_per_day);
+        out('days').textContent = data.days;
+        out('base').textContent = rub(data.base_cost);
+        out('total').textContent = rub(data.total);
+        out('discount-row').hidden = !data.discount;
+        out('hint').textContent = data.discount ? 'Прокат от 3 суток — скидка уже учтена в итоговой сумме.' : defaultHint;
+      } catch (error) {
+        reset('Не удалось рассчитать стоимость. Итог всё равно посчитается при сохранении.');
+      } finally {
+        summary.classList.remove('is-loading');
+      }
+    }
+
+    fields.forEach((field) => field && field.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(estimate, 250);
+    }));
+    estimate();
+  })();
+</script>
 {% endblock %}

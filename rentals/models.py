@@ -144,8 +144,9 @@ class Rental(models.Model):
         return math.ceil(delta.total_seconds() / 86400)
 
     def clean(self):
-        if self.end_datetime <= self.start_datetime:
-            raise ValidationError('Дата окончания должна быть позже даты начала.')
+        # Даты могут отсутствовать, если не прошли проверку формы, — тогда сравнивать нечего.
+        if self.start_datetime and self.end_datetime and self.end_datetime <= self.start_datetime:
+            raise ValidationError({'end_datetime': 'Дата окончания должна быть позже даты начала.'})
 
     def cancel(self):
         if self.status == self.Status.COMPLETED:

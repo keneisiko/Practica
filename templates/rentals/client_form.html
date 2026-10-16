@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% load rental_ui %}
+
+{% block title %}{% if object %}Клиент {{ object.full_name }}{% else %}Новый клиент{% endif %}{% endblock %}
+
+{% block content %}
+<div class="breadcrumbs"><a href="{% url 'rentals:client_list' %}">Клиенты</a> / {% if object %}{{ object.full_name }}{% else %}Новый клиент{% endif %}</div>
+<div class="page-head"><h1>{% if object %}Редактирование клиента{% else %}Новый клиент{% endif %}</h1></div>
+
+<form method="post" class="card card__body" style="max-width: 720px" novalidate>
+  {% csrf_token %}
+  <div class="form-grid form-grid--2">
+    {% form_field form.last_name %}
+    {% form_field form.first_name %}
+    {% form_field form.phone %}
+    {% form_field form.email %}
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn--accent"><svg><use href="#i-check"/></svg>Сохранить</button>
+    <a class="btn btn--ghost" href="{% url 'rentals:client_list' %}">Отмена</a>
+  </div>
+</form>
+{% endblock %}

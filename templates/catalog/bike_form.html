@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load rental_ui %}
+
+{% block title %}{% if object %}Изменить {{ object.model }}{% else %}Новый велосипед{% endif %}{% endblock %}
+
+{% block content %}
+<div class="breadcrumbs"><a href="{% url 'catalog:bike_list' %}">Каталог</a> / {% if object %}<a href="{% url 'catalog:bike_detail' object.pk %}">{{ object.model }}</a> / Изменение{% else %}Новый велосипед{% endif %}</div>
+<div class="page-head">
+  <div>
+    <h1>{% if object %}Изменение велосипеда{% else %}Новый велосипед{% endif %}</h1>
+    <p>Статус «В прокате» выставляется автоматически при оформлении проката.</p>
+  </div>
+</div>
+
+<form method="post" class="card card__body" style="max-width: 760px" novalidate>
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="form-grid form-grid--2">
+      {% form_field form.model %}
+      {% form_field form.serial_number %}
+      {% form_field form.bike_type %}
+      {% form_field form.status %}
+    </div>
+    {% form_field form.description %}
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn--accent"><svg><use href="#i-check"/></svg>Сохранить</button>
+    <a class="btn btn--ghost" href="{% if object %}{% url 'catalog:bike_detail' object.pk %}{% else %}{% url 'catalog:bike_list' %}{% endif %}">Отмена</a>
+  </div>
+</form>
+{% endblock %}
