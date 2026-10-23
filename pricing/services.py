@@ -1,8 +1,24 @@
-import math
-from decimal import ROUND_HALF_UP, Decimal
+"""Связка приложения с модулем расчёта стоимости `rental_cost` (этап 4).
 
-DISCOUNT_THRESHOLD_DAYS = 3
-DISCOUNT_RATE = Decimal('0.10')
+Приложение знает про велосипеды и даты, а модуль — только про
+тип велосипеда, продолжительность и базовую цену. Здесь данные из БД
+переводятся в исходные данные модуля и передаются ему.
+"""
+
+import math
+
+from rental_cost import DISCOUNT_RATE, DISCOUNT_THRESHOLD_DAYS, CostCalculationError, calculate_cost
+
+__all__ = [
+    'DISCOUNT_RATE',
+    'DISCOUNT_THRESHOLD_DAYS',
+    'CostCalculationError',
+    'SECONDS_IN_DAY',
+    'calculate_rental_cost',
+    'estimate_rental',
+    'rental_days',
+]
+
 SECONDS_IN_DAY = 86400
 
 
@@ -14,12 +30,18 @@ def rental_days(start_datetime, end_datetime):
     return math.ceil(seconds / SECONDS_IN_DAY)
 
 
+def estimate_rental(bike_type, start_datetime, end_datetime):
+    """Передаёт в модуль тип велосипеда, продолжительность и базовую цену; возвращает CostResult.
+
+    :raises CostCalculationError: если окончание не позже начала или данные типа некорректны
+    """
+    return calculate_cost(
+        bike_type=bike_type.name,
+        duration_days=rental_days(start_datetime, end_datetime),
+        base_price_per_day=bike_type.base_price_per_day,
+    )
+
+
 def calculate_rental_cost(bike_type, start_datetime, end_datetime):
-    """Стоимость = базовая цена типа за сутки × количество суток, от 3 суток — скидка 10 %."""
-    days = rental_days(start_datetime, end_datetime)
-    if days == 0:
-        return Decimal('0')
-    cost = bike_type.base_price_per_day * days
-    if days >= DISCOUNT_THRESHOLD_DAYS:
-        cost = cost * (Decimal('1') - DISCOUNT_RATE)
-    return cost.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    """Итоговая стоимость проката для сохранения в БД."""
+    return estimate_rental(bike_type, start_datetime, end_datetime).total
