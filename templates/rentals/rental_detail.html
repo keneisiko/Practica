@@ -51,6 +51,9 @@
   {% if user.is_manager_role and rental.status == 'active' %}
     <a class="btn" href="{% url 'rentals:rental_complete' rental.pk %}"><svg><use href="#i-flag"/></svg>Завершить прокат</a>
   {% endif %}
+  {% if rental.status == 'active' %}
+    <a class="btn btn--ghost" href="{% url 'rentals:rental_cancel' rental.pk %}">Отменить прокат</a>
+  {% endif %}
   {% if user.is_admin_role %}
     <a class="btn btn--ghost" href="{% url 'rentals:rental_edit' rental.pk %}"><svg><use href="#i-edit"/></svg>Редактировать</a>
   {% endif %}
