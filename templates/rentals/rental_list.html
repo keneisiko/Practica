@@ -63,6 +63,9 @@
                 {% if user.is_manager_role and rental.status == 'active' %}
                   <a class="btn btn--sm" href="{% url 'rentals:rental_complete' rental.pk %}">Завершить</a>
                 {% endif %}
+                {% if rental.status == 'active' %}
+                  <a class="btn btn--ghost btn--sm" href="{% url 'rentals:rental_cancel' rental.pk %}">Отменить</a>
+                {% endif %}
               </div>
             </td>
           </tr>

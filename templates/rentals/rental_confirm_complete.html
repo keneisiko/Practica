@@ -8,7 +8,7 @@
 <div class="card card__body" style="max-width: 620px">
   {% if rental.status == 'active' %}
     <h1>Завершить прокат №{{ rental.pk }}?</h1>
-    <p class="muted">Прокат получит статус «Завершена», а велосипед снова станет доступен для новых прокатов. Отменить это действие нельзя.</p>
+    <p class="muted">Прокат получит статус «Завершён», а велосипед снова станет доступен для новых прокатов. Отменить это действие нельзя.</p>
     <dl class="spec-list">
       <dt>Клиент</dt><dd>{{ rental.client.full_name }}</dd>
       <dt>Велосипед</dt><dd>{{ rental.bike.model }}</dd>

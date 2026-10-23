@@ -175,6 +175,103 @@ class RentalCompleteTest(RentalTestData):
         self.assertContains(response, 'только менеджерам и администраторам', status_code=403)
 
 
+class RentalCancelTest(RentalTestData):
+    """Этап 3: отмена проката."""
+
+    def cancel_url(self, rental):
+        return reverse('rentals:rental_cancel', args=[rental.pk])
+
+    def test_confirmation_is_requested_before_cancel(self):
+        rental = self.make_rental()
+        self.client.force_login(self.manager)
+        response = self.client.get(self.cancel_url(rental))
+        self.assertContains(response, 'Да, отменить прокат')
+        rental.refresh_from_db()
+        self.assertEqual(rental.status, Rental.Status.ACTIVE)  # GET ничего не меняет
+
+    def test_manager_cancels_rental_record_kept_and_bike_available(self):
+        rental = self.make_rental()
+        self.client.force_login(self.manager)
+        response = self.client.post(self.cancel_url(rental), follow=True)
+        self.assertContains(response, f'Прокат №{rental.pk} отменён')
+        rental.refresh_from_db()
+        self.busy_bike.refresh_from_db()
+        self.assertEqual(rental.status, Rental.Status.CANCELLED)
+        self.assertEqual(rental.get_status_display(), 'Отменён')
+        self.assertTrue(Rental.objects.filter(pk=rental.pk).exists())  # запись не удалена
+        self.assertEqual(self.busy_bike.status, Bike.Status.AVAILABLE)
+
+    def test_bike_can_be_rented_again_after_cancel(self):
+        rental = self.make_rental()
+        self.client.force_login(self.manager)
+        self.client.post(self.cancel_url(rental))
+        self.client.force_login(self.client_user)
+        self.client.post(reverse('rentals:rental_create'), {
+            'bike': self.busy_bike.pk,
+            'start_datetime': fmt(self.start),
+            'end_datetime': fmt(self.start + timedelta(days=1)),
+        })
+        self.assertTrue(Rental.objects.filter(
+            client=self.client_profile, bike=self.busy_bike, status=Rental.Status.ACTIVE
+        ).exists())
+        self.busy_bike.refresh_from_db()
+        self.assertEqual(self.busy_bike.status, Bike.Status.RENTED)
+
+    def test_completed_rental_cannot_be_cancelled(self):
+        rental = self.make_rental(status=Rental.Status.COMPLETED)
+        self.client.force_login(self.manager)
+        response = self.client.post(self.cancel_url(rental), follow=True)
+        self.assertContains(response, 'Завершённый прокат отменить нельзя')
+        rental.refresh_from_db()
+        self.assertEqual(rental.status, Rental.Status.COMPLETED)
+
+    def test_cancelled_rental_cannot_be_cancelled_again(self):
+        rental = self.make_rental(status=Rental.Status.CANCELLED)
+        self.client.force_login(self.admin)
+        response = self.client.post(self.cancel_url(rental), follow=True)
+        self.assertContains(response, 'уже отменён')
+
+    def test_client_cancels_own_rental(self):
+        rental = self.make_rental(client=self.client_profile)
+        self.client.force_login(self.client_user)
+        self.client.post(self.cancel_url(rental))
+        rental.refresh_from_db()
+        self.assertEqual(rental.status, Rental.Status.CANCELLED)
+
+    def test_client_cannot_cancel_foreign_rental(self):
+        rental = self.make_rental()  # прокат другого клиента
+        self.client.force_login(self.client_user)
+        response = self.client.post(self.cancel_url(rental))
+        self.assertEqual(response.status_code, 404)
+        rental.refresh_from_db()
+        self.assertEqual(rental.status, Rental.Status.ACTIVE)
+
+    def test_visitor_and_anonymous_cannot_cancel(self):
+        rental = self.make_rental()
+        response = self.client.post(self.cancel_url(rental))
+        self.assertEqual(response.status_code, 302)  # аноним — на страницу входа
+        self.client.force_login(self.visitor)
+        response = self.client.post(self.cancel_url(rental))
+        self.assertEqual(response.status_code, 403)
+        rental.refresh_from_db()
+        self.assertEqual(rental.status, Rental.Status.ACTIVE)
+
+    def test_cancel_button_shown_only_for_active(self):
+        active = self.make_rental()
+        done = self.make_rental(bike=self.bike, status=Rental.Status.COMPLETED)
+        self.client.force_login(self.manager)
+        self.assertContains(self.client.get(reverse('rentals:rental_detail', args=[active.pk])), 'Отменить прокат')
+        self.assertNotContains(self.client.get(reverse('rentals:rental_detail', args=[done.pk])), 'Отменить прокат')
+
+    def test_model_cancel_method_uses_same_rules(self):
+        rental = self.make_rental()
+        rental.cancel()
+        rental.refresh_from_db()
+        self.busy_bike.refresh_from_db()
+        self.assertEqual(rental.status, Rental.Status.CANCELLED)
+        self.assertEqual(self.busy_bike.status, Bike.Status.AVAILABLE)
+
+
 class AdminFunctionsTest(RentalTestData):
     def test_admin_edits_rental_and_cost_is_recalculated(self):
         rental = self.make_rental()

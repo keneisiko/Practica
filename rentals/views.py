@@ -22,7 +22,7 @@ from pricing.services import DISCOUNT_RATE, DISCOUNT_THRESHOLD_DAYS, calculate_r
 
 from .forms import ClientForm, RentalAdminForm, RentalForm
 from .models import Client, Rental
-from .services import RentalError, complete_rental, create_rental, update_rental
+from .services import RentalError, cancel_rental, complete_rental, create_rental, update_rental
 
 
 def visible_rentals(user):
@@ -158,6 +158,32 @@ class RentalCompleteView(ManagerRequiredMixin, View):
             messages.error(request, str(exc))
         else:
             messages.success(request, f'Прокат №{rental.pk} завершён, велосипед «{rental.bike.model}» снова доступен.')
+        return redirect('rentals:rental_detail', pk=rental.pk)
+
+
+class RentalCancelView(CanRentMixin, View):
+    """Отмена проката: GET — подтверждение, POST — выполнение.
+
+    Менеджер и администратор отменяют любой прокат, клиент — только свой
+    (чужой прокат клиенту не виден, поэтому для него вернётся 404).
+    """
+
+    template_name = 'rentals/rental_confirm_cancel.html'
+
+    def get_rental(self, pk):
+        return get_object_or_404(visible_rentals(self.request.user), pk=pk)
+
+    def get(self, request, pk):
+        return render(request, self.template_name, {'rental': self.get_rental(pk)})
+
+    def post(self, request, pk):
+        rental = self.get_rental(pk)
+        try:
+            cancel_rental(rental)
+        except RentalError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, f'Прокат №{rental.pk} отменён, велосипед «{rental.bike.model}» снова доступен.')
         return redirect('rentals:rental_detail', pk=rental.pk)
 
 

@@ -57,6 +57,23 @@ def complete_rental(rental):
 
 
 @transaction.atomic
+def cancel_rental(rental):
+    """Отмена проката: статус «Отменён», запись остаётся в БД, велосипед снова доступен.
+
+    Завершённый прокат отменить нельзя, повторная отмена тоже запрещена.
+    """
+    rental = Rental.objects.select_for_update().get(pk=rental.pk)
+    if rental.status == Rental.Status.COMPLETED:
+        raise RentalError('Завершённый прокат отменить нельзя.')
+    if rental.status == Rental.Status.CANCELLED:
+        raise RentalError('Этот прокат уже отменён.')
+    rental.status = Rental.Status.CANCELLED
+    rental.save(update_fields=['status'])
+    _release_bike_if_free(_lock_bike(rental.bike_id))
+    return rental
+
+
+@transaction.atomic
 def update_rental(rental, *, client, bike, start_datetime, end_datetime, status):
     """Редактирование проката администратором: пересчитывает стоимость и статусы велосипедов."""
     rental = Rental.objects.select_for_update().get(pk=rental.pk)

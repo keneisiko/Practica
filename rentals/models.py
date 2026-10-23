@@ -63,9 +63,9 @@ class RentalManager(models.Manager):
 
 class Rental(models.Model):
     class Status(models.TextChoices):
-        ACTIVE = 'active', 'Активна'
-        COMPLETED = 'completed', 'Завершена'
-        CANCELLED = 'cancelled', 'Отменена'
+        ACTIVE = 'active', 'Активен'
+        COMPLETED = 'completed', 'Завершён'
+        CANCELLED = 'cancelled', 'Отменён'
 
     client = models.ForeignKey(
         Client,
@@ -149,19 +149,15 @@ class Rental(models.Model):
             raise ValidationError({'end_datetime': 'Дата окончания должна быть позже даты начала.'})
 
     def cancel(self):
-        if self.status == self.Status.COMPLETED:
-            raise ValidationError('Невозможно отменить завершенную аренду.')
-        elif self.status == self.Status.CANCELLED:
-            raise ValidationError('Аренда уже отменена.')
-        else:
-            self.status = self.Status.CANCELLED
-            self.save()
+        """Отмена проката. Запись не удаляется, велосипед освобождается — см. rentals.services.cancel_rental."""
+        from .services import cancel_rental
+        return cancel_rental(self)
 
     def complete(self):
         if self.status == self.Status.CANCELLED:
-            raise ValidationError('Невозможно завершить отмененную аренду.')
+            raise ValidationError('Невозможно завершить отменённый прокат.')
         elif self.status == self.Status.COMPLETED:
-            raise ValidationError('Аренда уже завершена.')
+            raise ValidationError('Прокат уже завершён.')
         else:
             self.status = self.Status.COMPLETED
             self.save()
