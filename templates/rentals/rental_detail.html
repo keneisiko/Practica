@@ -39,9 +39,11 @@
   </div>
 
   <div class="receipt__cost">
-    <div class="summary__row"><span>{{ rental.bike.bike_type.base_price_per_day|floatformat:0 }} ₽ × {{ days }} сут.</span><strong>{{ base_cost|floatformat:2 }} ₽</strong></div>
-    {% if has_discount %}
-      <div class="summary__row summary__row--discount"><span>Скидка {{ discount_percent }} % (от 3 суток)</span><strong>учтена</strong></div>
+    {% if cost %}
+    <div class="summary__row"><span>{{ cost.base_price_per_day|floatformat:0 }} ₽ × {{ cost.duration_days }} сут.</span><strong>{{ cost.base_cost }} ₽</strong></div>
+    {% if cost.has_discount %}
+      <div class="summary__row summary__row--discount"><span>Скидка {{ cost.discount_percent }} % (от 3 суток)</span><strong>−{{ cost.discount_amount }} ₽</strong></div>
+    {% endif %}
     {% endif %}
     <div class="summary__total"><span>Итого</span><strong>{{ rental.total_cost }} ₽</strong></div>
   </div>

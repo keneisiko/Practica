@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from django.contrib import messages
 from django.db.models import Q
 from django.http import JsonResponse
@@ -18,7 +16,7 @@ from accounts.decorators import (
     role_required,
 )
 from catalog.models import Bike
-from pricing.services import DISCOUNT_RATE, DISCOUNT_THRESHOLD_DAYS, calculate_rental_cost, rental_days
+from pricing.services import DISCOUNT_RATE, DISCOUNT_THRESHOLD_DAYS, CostCalculationError, estimate_rental
 
 from .forms import ClientForm, RentalAdminForm, RentalForm
 from .models import Client, Rental
@@ -131,11 +129,10 @@ class RentalDetailView(CanRentMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         rental = self.object
-        days = rental_days(rental.start_datetime, rental.end_datetime)
-        context['days'] = days
-        context['base_cost'] = rental.bike.bike_type.base_price_per_day * days
-        context['has_discount'] = days >= DISCOUNT_THRESHOLD_DAYS
-        context['discount_percent'] = int(DISCOUNT_RATE * 100)
+        try:
+            context['cost'] = estimate_rental(rental.bike.bike_type, rental.start_datetime, rental.end_datetime)
+        except CostCalculationError:
+            context['cost'] = None
         return context
 
 
@@ -223,18 +220,20 @@ def rental_estimate(request):
     bike = Bike.objects.select_related('bike_type').filter(pk=bike_id).first()
     if bike is None:
         return JsonResponse({'ok': False, 'error': 'Велосипед не найден.'})
-    days = rental_days(start, end)
-    if days == 0:
+    if end <= start:
         return JsonResponse({'ok': False, 'error': 'Окончание должно быть позже начала.'})
-    price = bike.bike_type.base_price_per_day
-    total = calculate_rental_cost(bike.bike_type, start, end)
+    try:
+        cost = estimate_rental(bike.bike_type, start, end)
+    except CostCalculationError as exc:
+        return JsonResponse({'ok': False, 'error': str(exc)})
     return JsonResponse({
         'ok': True,
-        'days': days,
-        'price_per_day': str(price),
-        'base_cost': str((price * days).quantize(Decimal('0.01'))),
-        'discount': days >= DISCOUNT_THRESHOLD_DAYS,
-        'total': str(total),
+        'days': cost.duration_days,
+        'price_per_day': str(cost.base_price_per_day),
+        'base_cost': str(cost.base_cost),
+        'discount': cost.has_discount,
+        'discount_amount': str(cost.discount_amount),
+        'total': str(cost.total),
     })
 
 

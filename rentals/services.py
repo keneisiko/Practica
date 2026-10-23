@@ -3,13 +3,21 @@
 from django.db import transaction
 
 from catalog.models import Bike
-from pricing.services import calculate_rental_cost
+from pricing.services import CostCalculationError, calculate_rental_cost
 
 from .models import Rental
 
 
 class RentalError(Exception):
     """Операцию нельзя выполнить. Текст исключения показывается пользователю."""
+
+
+def _cost(bike_type, start_datetime, end_datetime):
+    """Стоимость из модуля расчёта; его ошибки показываются пользователю как ошибки операции."""
+    try:
+        return calculate_rental_cost(bike_type, start_datetime, end_datetime)
+    except CostCalculationError as exc:
+        raise RentalError(f'Не удалось рассчитать стоимость: {exc}') from exc
 
 
 def _lock_bike(bike_id):
@@ -36,7 +44,7 @@ def create_rental(*, client, bike, start_datetime, end_datetime, created_by):
         bike=bike,
         start_datetime=start_datetime,
         end_datetime=end_datetime,
-        total_cost=calculate_rental_cost(bike.bike_type, start_datetime, end_datetime),
+        total_cost=_cost(bike.bike_type, start_datetime, end_datetime),
         status=Rental.Status.ACTIVE,
         created_by=created_by,
     )
@@ -90,7 +98,7 @@ def update_rental(rental, *, client, bike, start_datetime, end_datetime, status)
     rental.start_datetime = start_datetime
     rental.end_datetime = end_datetime
     rental.status = status
-    rental.total_cost = calculate_rental_cost(new_bike.bike_type, start_datetime, end_datetime)
+    rental.total_cost = _cost(new_bike.bike_type, start_datetime, end_datetime)
     rental.save()
 
     if takes_new_bike:
